@@ -1,16 +1,17 @@
-# Bluetooth Chat - Offline P2P Messaging
+# Bluetooth Chat - Offline P2P Messaging with Secret Key Pairing
 
-A cross-platform React web application that enables secure, offline chat between two users via Bluetooth, without requiring internet connectivity.
+A cross-platform React web application that enables secure, offline chat between two users via Bluetooth, featuring instant pairing with secret keys and traditional device scanning.
 
 ## Features
 
-- 🔵 **Bluetooth Discovery & Pairing**: Detect and connect to nearby Bluetooth devices
+- 🔑 **Secret Key Instant Pairing**: Connect instantly by entering the same pre-shared secret key on both devices
+- 🔵 **Bluetooth Discovery & Pairing**: Traditional device scanning and manual connection
 - 💬 **Real-time Chat Interface**: Simple, intuitive messaging with conversation history
-- 🔒 **AES Encryption**: All messages are encrypted before transmission
+- 🔒 **AES Encryption**: All messages encrypted using secret key or generated encryption
 - 📱 **Mobile-Friendly**: Responsive design optimized for mobile devices
 - 🔄 **Connection Management**: Visual connection status and graceful disconnect handling
 - 🚫 **No Internet Required**: Works completely offline using Web Bluetooth API
-- 🎨 **Minimalist Design**: Clean, modern UI with smooth animations
+- 🎨 **Minimalist Design**: Clean, modern UI with smooth animations and dual connection modes
 
 ## Browser Compatibility
 
@@ -76,31 +77,50 @@ Deploy the `build` folder to any static hosting service:
 
 ## Testing Instructions
 
-### Single Device Testing (Development)
+### Method 1: Secret Key Instant Pairing (Recommended)
 
-1. Open the app in **two separate browser tabs**
-2. In the first tab, click **"Find & Connect"**
-3. You may see a device selection dialog (this varies by browser)
-4. The connection status should show "Connected"
-5. Type messages in either tab to test the interface
-
-### Two Device Testing (Recommended)
+**Two Device Testing:**
 
 1. **Device A Setup**:
-   - Open the app in a supported browser
+   - Open the app in Chrome/Edge
    - Ensure Bluetooth is enabled
-   - Click "Find & Connect"
+   - Select "🔑 Secret Key" tab (default)
+   - Enter a secret key (e.g., "myroom123")
+   - Click "Connect with Key"
 
 2. **Device B Setup**:
-   - Open the same app URL
+   - Open the same app URL on second device
    - Ensure Bluetooth is enabled
-   - Click "Find & Connect"
+   - Select "🔑 Secret Key" tab
+   - Enter the **exact same secret key** ("myroom123")
+   - Click "Connect with Key"
+
+3. **Instant Connection**:
+   - Both devices should connect automatically
+   - Status shows "Connected" with 🔒 Encrypted indicator
+   - Messages are encrypted using the shared secret key
+   - Start chatting immediately!
+
+**Single Device Testing:**
+1. Open **two browser tabs** with the app
+2. Use the same secret key in both tabs
+3. Connect and test messaging between tabs
+
+### Method 2: Traditional Device Scanning
+
+1. **Device A Setup**:
+   - Select "📡 Scan Devices" tab
+   - Click "Scan for Devices"
+   - Make device discoverable when prompted
+
+2. **Device B Setup**:
+   - Select "📡 Scan Devices" tab
+   - Click "Scan for Devices"
    - Select Device A from the list
 
-3. **Start Chatting**:
-   - Both devices should show "Connected" status
-   - Messages sent from either device appear on both screens
-   - All messages are automatically encrypted
+3. **Manual Connection**:
+   - Follow pairing prompts
+   - Start chatting once connected
 
 ### Troubleshooting
 

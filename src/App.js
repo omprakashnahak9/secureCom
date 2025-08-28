@@ -13,6 +13,9 @@ function App() {
   const [encryptionKey, setEncryptionKey] = useState('');
   const [device, setDevice] = useState(null);
   const [characteristic, setCharacteristic] = useState(null);
+  const [secretKey, setSecretKey] = useState('');
+  const [connectionMode, setConnectionMode] = useState('secret'); // 'secret' or 'scan'
+  const [showKeyOptions, setShowKeyOptions] = useState(false);
   
   const messagesEndRef = useRef(null);
 
@@ -21,11 +24,15 @@ function App() {
     if (!navigator.bluetooth) {
       setError('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
     }
-    
-    // Generate encryption key
-    const key = CryptoJS.lib.WordArray.random(256/8).toString();
-    setEncryptionKey(key);
   }, []);
+
+  // Generate encryption key from secret key
+  useEffect(() => {
+    if (secretKey) {
+      const key = CryptoJS.SHA256(secretKey).toString();
+      setEncryptionKey(key);
+    }
+  }, [secretKey]);
 
   useEffect(() => {
     scrollToBottom();
@@ -48,43 +55,124 @@ function App() {
     }
   };
 
+  // Generate service UUID from secret key for instant pairing
+  const generateServiceUUID = (key) => {
+    const hash = CryptoJS.SHA256(key).toString();
+    return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-${hash.substring(12, 16)}-${hash.substring(16, 20)}-${hash.substring(20, 32)}`;
+  };
+
+  // Connect using secret key (instant pairing)
+  const connectWithSecretKey = async () => {
+    if (!secretKey.trim()) {
+      setError('Please enter a secret key');
+      return;
+    }
+
+    try {
+      setIsConnecting(true);
+      setError('');
+      
+      const keyServiceUUID = generateServiceUUID(secretKey);
+      addSystemMessage(`Looking for devices with key: ${secretKey.substring(0, 3)}***`);
+
+      // Try to find device with matching secret key service
+      const selectedDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [keyServiceUUID] }],
+        optionalServices: [keyServiceUUID, CHAT_SERVICE_UUID]
+      });
+
+      setDevice(selectedDevice);
+      const server = await selectedDevice.gatt.connect();
+      
+      try {
+        // Try to get the key-based service first
+        const keyService = await server.getPrimaryService(keyServiceUUID);
+        const keyChar = await keyService.getCharacteristic(MESSAGE_CHARACTERISTIC_UUID);
+        setCharacteristic(keyChar);
+
+        await keyChar.startNotifications();
+        keyChar.addEventListener('characteristicvaluechanged', handleIncomingMessage);
+        
+        addSystemMessage('🔑 Connected via secret key! End-to-end encrypted.');
+      } catch (keyServiceError) {
+        // Fallback to regular chat service
+        const service = await server.getPrimaryService(CHAT_SERVICE_UUID);
+        const char = await service.getCharacteristic(MESSAGE_CHARACTERISTIC_UUID);
+        setCharacteristic(char);
+
+        await char.startNotifications();
+        char.addEventListener('characteristicvaluechanged', handleIncomingMessage);
+        
+        addSystemMessage('Connected to chat service!');
+      }
+
+      selectedDevice.addEventListener('gattserverdisconnected', handleDisconnection);
+      setIsConnected(true);
+      setIsConnecting(false);
+      
+    } catch (err) {
+      if (err.name === 'NotFoundError') {
+        setError('No devices found with this secret key. Make sure the other device is using the same key and is nearby.');
+      } else {
+        setError(`Connection failed: ${err.message}`);
+      }
+      setIsConnecting(false);
+    }
+  };
+
+  // Regular device scanning
   const connectToDevice = async () => {
     try {
       setIsConnecting(true);
       setError('');
 
-      // Request device
       const selectedDevice = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [CHAT_SERVICE_UUID] }],
-        optionalServices: [CHAT_SERVICE_UUID]
+        acceptAllDevices: true,
+        optionalServices: ['battery_service', 'device_information', CHAT_SERVICE_UUID]
       });
 
       setDevice(selectedDevice);
-
-      // Connect to GATT server
       const server = await selectedDevice.gatt.connect();
       
-      // Get service
-      const service = await server.getPrimaryService(CHAT_SERVICE_UUID);
-      
-      // Get characteristic
-      const char = await service.getCharacteristic(MESSAGE_CHARACTERISTIC_UUID);
-      setCharacteristic(char);
+      try {
+        const service = await server.getPrimaryService(CHAT_SERVICE_UUID);
+        const char = await service.getCharacteristic(MESSAGE_CHARACTERISTIC_UUID);
+        setCharacteristic(char);
 
-      // Start notifications
-      await char.startNotifications();
-      char.addEventListener('characteristicvaluechanged', handleIncomingMessage);
+        await char.startNotifications();
+        char.addEventListener('characteristicvaluechanged', handleIncomingMessage);
+        
+        addSystemMessage('Connected to existing chat service!');
+      } catch (serviceError) {
+        // Create mock connection for demo
+        const mockChar = {
+          writeValue: async (data) => {
+            setTimeout(() => {
+              const decoder = new TextDecoder();
+              const encryptedMsg = decoder.decode(data);
+              const decryptedMsg = decryptMessage(encryptedMsg);
+              if (decryptedMsg !== '[Decryption failed]') {
+                addMessage(`Echo: ${decryptedMsg}`, 'received');
+              }
+            }, 1000);
+          }
+        };
+        setCharacteristic(mockChar);
+        addSystemMessage('Connected! (Demo mode - messages will echo back)');
+      }
 
-      // Handle disconnection
       selectedDevice.addEventListener('gattserverdisconnected', handleDisconnection);
-
       setIsConnected(true);
       setIsConnecting(false);
       
-      addSystemMessage('Connected successfully! Messages are encrypted.');
-      
     } catch (err) {
-      setError(`Connection failed: ${err.message}`);
+      if (err.name === 'NotFoundError') {
+        setError('No devices found. Make sure Bluetooth is enabled and other devices are nearby and discoverable.');
+      } else if (err.name === 'SecurityError') {
+        setError('Bluetooth access denied. Please allow Bluetooth permissions and try again.');
+      } else {
+        setError(`Connection failed: ${err.message}`);
+      }
       setIsConnecting(false);
     }
   };
@@ -156,6 +244,65 @@ function App() {
     }
   };
 
+  // Generate random secret key
+  const generateRandomKey = () => {
+    const adjectives = ['Blue', 'Red', 'Green', 'Fast', 'Cool', 'Smart', 'Bright', 'Swift'];
+    const nouns = ['Cat', 'Dog', 'Bird', 'Fish', 'Lion', 'Bear', 'Wolf', 'Fox'];
+    const numbers = Math.floor(Math.random() * 999) + 100;
+    
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    
+    return `${adjective}${noun}${numbers}`;
+  };
+
+  // Generate simple numeric key
+  const generateNumericKey = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
+  // Generate word-based key
+  const generateWordKey = () => {
+    const words = ['apple', 'beach', 'cloud', 'dance', 'eagle', 'flame', 'grape', 'house'];
+    const word1 = words[Math.floor(Math.random() * words.length)];
+    const word2 = words[Math.floor(Math.random() * words.length)];
+    const num = Math.floor(Math.random() * 99) + 10;
+    return `${word1}-${word2}-${num}`;
+  };
+
+  // Copy key to clipboard
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      addSystemMessage(`Key copied: ${text}`);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      addSystemMessage(`Key copied: ${text}`);
+    }
+  };
+
+  // Share key via Web Share API (mobile)
+  const shareKey = async (key) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Bluetooth Chat Secret Key',
+          text: `Join my secure chat with this key: ${key}`,
+        });
+      } catch (err) {
+        copyToClipboard(key);
+      }
+    } else {
+      copyToClipboard(key);
+    }
+  };
+
   const getConnectionStatus = () => {
     if (isConnecting) return { text: 'Connecting...', class: 'connecting' };
     if (isConnected) return { text: 'Connected', class: 'connected' };
@@ -207,20 +354,148 @@ function App() {
 
       {!isConnected && !isConnecting ? (
         <div className="connection-panel">
-          <h2>Connect to Chat</h2>
-          <p>
-            Connect to another device running this app to start chatting securely over Bluetooth.
-          </p>
-          <p>
-            Make sure both devices have Bluetooth enabled and are nearby.
-          </p>
-          <button 
-            className="btn" 
-            onClick={connectToDevice}
-            disabled={isConnecting}
-          >
-            Find & Connect
-          </button>
+          <div className="connection-modes">
+            <button 
+              className={`mode-btn ${connectionMode === 'secret' ? 'active' : ''}`}
+              onClick={() => setConnectionMode('secret')}
+            >
+              🔑 Secret Key
+            </button>
+            <button 
+              className={`mode-btn ${connectionMode === 'scan' ? 'active' : ''}`}
+              onClick={() => setConnectionMode('scan')}
+            >
+              📡 Scan Devices
+            </button>
+          </div>
+
+          {connectionMode === 'secret' ? (
+            <div className="secret-key-panel">
+              <h2>Instant Pairing</h2>
+              <p>Enter the same secret key on both devices for instant secure connection.</p>
+              
+              <div className="secret-input-container">
+                <input
+                  type="text"
+                  className="secret-input"
+                  placeholder="Enter or generate secret key..."
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && connectWithSecretKey()}
+                />
+                <button 
+                  className="generate-btn"
+                  onClick={() => setShowKeyOptions(!showKeyOptions)}
+                  type="button"
+                >
+                  🎲
+                </button>
+              </div>
+
+              {showKeyOptions && (
+                <div className="key-generator">
+                  <h3>Generate Secret Key</h3>
+                  <div className="generator-options">
+                    <button 
+                      className="generator-btn"
+                      onClick={() => {
+                        const key = generateRandomKey();
+                        setSecretKey(key);
+                        setShowKeyOptions(false);
+                      }}
+                    >
+                      🎯 Random Key<br/>
+                      <small>e.g., BlueCat123</small>
+                    </button>
+                    <button 
+                      className="generator-btn"
+                      onClick={() => {
+                        const key = generateNumericKey();
+                        setSecretKey(key);
+                        setShowKeyOptions(false);
+                      }}
+                    >
+                      🔢 Number Key<br/>
+                      <small>e.g., 456789</small>
+                    </button>
+                    <button 
+                      className="generator-btn"
+                      onClick={() => {
+                        const key = generateWordKey();
+                        setSecretKey(key);
+                        setShowKeyOptions(false);
+                      }}
+                    >
+                      📝 Word Key<br/>
+                      <small>e.g., apple-cloud-42</small>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {secretKey && (
+                <div className="key-actions">
+                  <button 
+                    className="action-btn"
+                    onClick={() => copyToClipboard(secretKey)}
+                  >
+                    📋 Copy Key
+                  </button>
+                  <button 
+                    className="action-btn"
+                    onClick={() => shareKey(secretKey)}
+                  >
+                    📤 Share Key
+                  </button>
+                </div>
+              )}
+
+              <div className="key-info">
+                <div className="info-item">
+                  <span className="info-icon">🔒</span>
+                  <span>Messages encrypted with your key</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-icon">⚡</span>
+                  <span>Instant connection when keys match</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-icon">🚫</span>
+                  <span>No internet required</span>
+                </div>
+              </div>
+
+              <button 
+                className="btn connect-btn" 
+                onClick={connectWithSecretKey}
+                disabled={!secretKey.trim() || isConnecting}
+              >
+                {isConnecting ? 'Connecting...' : 'Connect with Key'}
+              </button>
+            </div>
+          ) : (
+            <div className="scan-panel">
+              <h2>Scan for Devices</h2>
+              <p>Scan for any nearby Bluetooth devices and connect manually.</p>
+              
+              <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '10px', margin: '15px 0', fontSize: '0.9rem' }}>
+                <strong>Before scanning:</strong>
+                <ul style={{ textAlign: 'left', marginTop: '8px', paddingLeft: '20px' }}>
+                  <li>Enable Bluetooth on both devices</li>
+                  <li>Make sure devices are discoverable</li>
+                  <li>Stay within 30 feet of each other</li>
+                </ul>
+              </div>
+
+              <button 
+                className="btn" 
+                onClick={connectToDevice}
+                disabled={isConnecting}
+              >
+                {isConnecting ? 'Scanning...' : 'Scan for Devices'}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="chat-container">

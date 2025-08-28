@@ -169,6 +169,11 @@ body {
   align-items: flex-start;
 }
 
+.message.system {
+  align-items: center;
+  margin: 10px 0;
+}
+
 .message-bubble {
   max-width: 80%;
   padding: 12px 16px;
@@ -185,6 +190,15 @@ body {
 .message.received .message-bubble {
   background: #f1f2f6;
   color: #333;
+}
+
+.message.system .message-bubble {
+  background: #e8f4fd;
+  color: #1e88e5;
+  border: 1px solid #bbdefb;
+  font-size: 0.9rem;
+  max-width: 90%;
+  text-align: center;
 }
 
 .message-time {
@@ -279,4 +293,280 @@ body {
 .device-id {
   font-size: 0.8rem;
   color: #666;
+}
+
+/* Secret Key Connection Styles */
+.connection-modes {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: #f8f9fa;
+  padding: 4px;
+  border-radius: 25px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  color: #666;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.mode-btn:hover:not(.active) {
+  background: #e9ecef;
+}
+
+.secret-key-panel, .scan-panel {
+  text-align: center;
+}
+
+.secret-input-container {
+  margin: 20px 0;
+}
+
+.secret-input {
+  width: 100%;
+  padding: 15px 20px;
+  border: 2px solid #e9ecef;
+  border-radius: 25px;
+  font-size: 1rem;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #f8f9fa;
+}
+
+.secret-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: white;
+}
+
+.secret-input::placeholder {
+  color: #adb5bd;
+}
+
+.key-info {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.info-icon {
+  font-size: 1.2rem;
+  width: 24px;
+  text-align: center;
+}
+
+.connect-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 15px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Enhanced status indicators */
+.status-dot.pairing {
+  background: #ff6b6b;
+  animation: pulse 1s infinite;
+}
+
+.encryption-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Secret Key Generator Styles */
+.secret-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.generate-btn {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+}
+
+.generate-btn:hover {
+  background: #e9ecef;
+  border-color: #667eea;
+  transform: rotate(90deg);
+}
+
+.key-generator {
+  background: #f8f9fa;
+  border-radius: 15px;
+  padding: 20px;
+  margin: 15px 0;
+  border: 1px solid #e9ecef;
+}
+
+.key-generator h3 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.generator-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.generator-btn {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 15px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.generator-btn:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+  transform: translateY(-2px);
+}
+
+.generator-btn small {
+  display: block;
+  color: #666;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.key-actions {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  justify-content: center;
+}
+
+.action-btn {
+  background: #e8f4fd;
+  color: #1e88e5;
+  border: 1px solid #bbdefb;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover {
+  background: #bbdefb;
+  transform: translateY(-1px);
+}
+
+/* Enhanced secret input */
+.secret-input {
+  flex: 1;
+}
+
+/* Animation for key generation */
+@keyframes keyGenerate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.generator-btn:active {
+  animation: keyGenerate 0.3s ease;
+}
+
+/* Responsive improvements */
+@media (max-width: 480px) {
+  .connection-modes {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .mode-btn {
+    padding: 12px;
+  }
+  
+  .secret-input {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+  
+  .info-item {
+    font-size: 0.85rem;
+  }
+
+  .generator-options {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .generator-btn {
+    padding: 12px;
+  }
+
+  .key-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .action-btn {
+    justify-content: center;
+  }
+
+  .generate-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
 }
